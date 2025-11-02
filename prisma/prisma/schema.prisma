@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Attribute {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  gameClasses GameClassAttribute[]
+  entities    EntityAttribute[]
+
+  @@map("attributes")
+}
+
+model GameClass {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String
+  parentId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent     GameClass?             @relation("GameClassHierarchy", fields: [parentId], references: [id])
+  children   GameClass[]            @relation("GameClassHierarchy")
+  attributes GameClassAttribute[]
+
+  @@map("game_classes")
+}
+
+model Entity {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  positionX   Float?
+  positionY   Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  attributes EntityAttribute[]
+  connections Connection[] @relation("EntityConnections")
+  targets    Connection[] @relation("EntityTargets")
+
+  @@map("entities")
+}
+
+model Connection {
+  id        String   @id @default(cuid())
+  sourceId  String
+  targetId  String
+  type      String
+  createdAt DateTime @default(now())
+
+  source Entity @relation("EntityConnections", fields: [sourceId], references: [id], onDelete: Cascade)
+  target Entity @relation("EntityTargets", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@map("connections")
+}
+
+model GameClassAttribute {
+  gameClassId String
+  attributeId String
+  createdAt   DateTime @default(now())
+
+  gameClass GameClass @relation(fields: [gameClassId], references: [id], onDelete: Cascade)
+  attribute Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+
+  @@id([gameClassId, attributeId])
+  @@map("game_class_attributes")
+}
+
+model EntityAttribute {
+  entityId    String
+  attributeId String
+  createdAt   DateTime @default(now())
+
+  entity    Entity    @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  attribute Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+
+  @@id([entityId, attributeId])
+  @@map("entity_attributes")
+}
