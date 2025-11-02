@@ -11,6 +11,8 @@ export interface GameClass {
   color: string;
   attributes: Attribute[];
   parentId?: string;
+  parent?: GameClass | null;
+  children?: GameClass[];
 }
 
 export interface Entity {
@@ -26,4 +28,12 @@ export interface Connection {
   sourceId: string;
   targetId: string;
   type: 'attribute-entity';
+}
+
+export interface AttributeSpecificity {
+  id: string;
+  entityId: string;
+  attributeId: string;
+  text: string;
+  position?: { x: number; y: number };
 }

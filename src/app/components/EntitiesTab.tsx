@@ -9,7 +9,7 @@ import { Textarea } from '../components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
 import { Checkbox } from '../components/ui/checkbox';
-import { Plus } from 'lucide-react';
+import { Plus, Dice5 } from 'lucide-react';
 
 interface EntitiesTabProps {
   entities: Entity[];
@@ -60,6 +60,19 @@ export const EntitiesTab = ({
     setIsDialogOpen(true);
   };
 
+  const createRandomEntity = () => {
+    // choisir un attribut aléatoire par classe
+    const attrIds: string[] = [];
+    classes.forEach((gc) => {
+      if (gc.attributes.length > 0) {
+        const idx = Math.floor(Math.random() * gc.attributes.length);
+        attrIds.push(gc.attributes[idx].id);
+      }
+    });
+    const randomName = `Entité ${Math.random().toString(36).slice(2, 7)}`;
+    onAddEntity({ name: randomName, description: '', attributeIds: attrIds });
+  };
+
   const handleSave = () => {
     if (!entityName.trim()) return;
 
@@ -97,13 +110,23 @@ export const EntitiesTab = ({
           </p>
         </div>
         
-        <Button 
-          onClick={() => openDialog()} 
-          className="bg-gradient-primary hover:opacity-90 transform hover:scale-105 transition-all duration-200 ease-in-out"
-        >
-          <Plus className="mr-2 h-4 w-4 transition-transform duration-200 group-hover:rotate-90" />
-          Nouvelle entité
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            onClick={() => createRandomEntity()} 
+            variant="secondary"
+            className="transform hover:scale-105 transition-all duration-200 ease-in-out"
+          >
+            <Dice5 className="mr-2 h-4 w-4" />
+            Entité aléatoire
+          </Button>
+          <Button 
+            onClick={() => openDialog()} 
+            className="bg-gradient-primary hover:opacity-90 transform hover:scale-105 transition-all duration-200 ease-in-out"
+          >
+            <Plus className="mr-2 h-4 w-4 transition-transform duration-200 group-hover:rotate-90" />
+            Nouvelle entité
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

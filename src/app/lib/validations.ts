@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 const createAttributeSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional()
@@ -7,8 +9,8 @@ const createGameClassSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-  parentId: z.string().uuid().optional(),
-  attributeIds: z.array(z.string().uuid()).optional()
+  parentId: z.string().cuid().optional(),
+  attributeIds: z.array(z.string().cuid()).optional()
 });
 
 const createEntitySchema = z.object({
@@ -18,26 +20,13 @@ const createEntitySchema = z.object({
     x: z.number(),
     y: z.number()
   }).optional(),
-  attributeIds: z.array(z.string().uuid()).optional()
+  attributeIds: z.array(z.string().cuid()).optional()
 });
 
 const createConnectionSchema = z.object({
-  sourceId: z.string().uuid(),
-  targetId: z.string().uuid(),
+  sourceId: z.string().cuid(),
+  targetId: z.string().cuid(),
   type: z.enum(['attribute-entity'])
 });
 
-// Success Response (200, 201)
-{
-  "data": { ... },
-  "success": true
-}
-
-// Error Response (400, 404, 500)
-{
-  "error": "Validation failed",
-  "details": [
-    { "field": "name", "message": "Name is required" }
-  ],
-  "success": false
-}
+export { createAttributeSchema, createGameClassSchema, createEntitySchema, createConnectionSchema };

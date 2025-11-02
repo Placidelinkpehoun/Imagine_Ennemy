@@ -2,6 +2,23 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model AttributeSpecificity {
+  id          String   @id @default(cuid())
+  entityId    String
+  attributeId String
+  text        String
+  posX        Float?
+  posY        Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  entity    Entity    @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  attribute Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+
+  @@unique([entityId, attributeId])
+  @@map("attribute_specificities")
+}
+
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
@@ -14,8 +31,9 @@ model Attribute {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  gameClasses GameClassAttribute[]
-  entities    EntityAttribute[]
+  gameClasses  GameClassAttribute[]
+  entities     EntityAttribute[]
+  specificities AttributeSpecificity[]
 
   @@map("attributes")
 }
@@ -48,6 +66,7 @@ model Entity {
   attributes EntityAttribute[]
   connections Connection[] @relation("EntityConnections")
   targets    Connection[] @relation("EntityTargets")
+  specifics  AttributeSpecificity[]
 
   @@map("entities")
 }
