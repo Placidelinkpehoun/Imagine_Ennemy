@@ -15,7 +15,6 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Entity, GameClass, AttributeSpecificity } from '../types/game';
-import { Badge } from '../components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
@@ -38,18 +37,14 @@ const EntityNode = ({ data }: { data: any }) => {
       )}
       <div className="flex flex-col gap-1">
         {attributes.map((attr: any, idx: number) => (
-          <Badge
+          <div
             key={idx}
-            className="text-xs w-fit self-start whitespace-nowrap cursor-pointer"
-            style={{
-              backgroundColor: `${attr.color}20`,
-              color: attr.color,
-              borderColor: attr.color,
-            }}
             onClick={attr.onClick}
+            className="bg-card border rounded-sm px-3 py-2 text-xs shadow-sm cursor-pointer w-fit"
+            style={{ borderColor: attr.color, color: attr.color }}
           >
             {attr.name}
-          </Badge>
+          </div>
         ))}
       </div>
     </div>
@@ -57,38 +52,30 @@ const EntityNode = ({ data }: { data: any }) => {
   );
 };
 
+const SpecificityNode = ({ data }: { data: any }) => {
+  const { text, onClick, attributeName, color } = data;
+  return (
+    <div
+      onClick={onClick}
+      className="bg-card border rounded-sm shadow-sm cursor-pointer max-w-64"
+    >
+      {attributeName && (
+        <div 
+          className="px-3 py-1 text-xs font-medium border-b"
+          style={{ borderColor: color, color }}
+        >
+          {attributeName}
+        </div>
+      )}
+      <div className="px-3 py-2 text-xs text-foreground">
+        {text}
+      </div>
+    </div>
+  );
+};
+
 const nodeTypes = {
   entity: EntityNode,
-};
-
-const AttributeNode = ({ data }: { data: any }) => {
-  const { name, color, onClick } = data;
-  return (
-    <div
-      onClick={onClick}
-      className="bg-card border rounded-sm px-3 py-2 text-xs shadow-sm cursor-pointer"
-      style={{ borderColor: color, color }}
-    >
-      {name}
-    </div>
-  );
-};
-
-const SpecificityNode = ({ data }: { data: any }) => {
-  const { text, onClick } = data;
-  return (
-    <div
-      onClick={onClick}
-      className="bg-card border border-muted rounded-sm px-3 py-2 text-xs shadow-sm cursor-pointer max-w-64"
-    >
-      {text}
-    </div>
-  );
-};
-
-const nodeTypesExtended = {
-  entity: EntityNode,
-  attribute: AttributeNode,
   specificity: SpecificityNode,
 };
 
@@ -185,27 +172,31 @@ export const CanvasTab = ({ entities, classes, onUpdateEntity }: CanvasTabProps)
         },
       });
 
-      // Attribute nodes and edges
+      // Specificity nodes connected directly to entity
       entity.attributeIds.forEach((attrId, idx) => {
-        const meta = findAttrMeta(attrId);
-        const aId = `attr-${entity.id}-${attrId}`;
-        const aPos = { x: ePos.x + 180, y: ePos.y + idx * 60 };
-        newNodes.push({ id: aId, type: 'attribute', position: aPos, data: { name: meta.name, color: meta.color, onClick: () => openSpecDialog(entity.id, attrId) } });
-        newEdges.push({ id: `e-${entity.id}-${aId}`, source: entity.id, target: aId });
-
-        // Specificity node if exists
         const spec = specificities.find((s) => s.entityId === entity.id && s.attributeId === attrId);
         if (spec) {
           const sId = `spec-${spec.id}`;
-          const sPos = spec.position || { x: aPos.x + 180, y: aPos.y };
-          newNodes.push({ id: sId, type: 'specificity', position: sPos, data: { text: spec.text, onClick: () => {
-            setEditingSpecId(spec.id);
-            setDialogEntityId(entity.id);
-            setDialogAttributeId(attrId);
-            setDialogText(spec.text);
-            setDialogOpen(true);
-          } } });
-          newEdges.push({ id: `e-${aId}-${sId}`, source: aId, target: sId });
+          const sPos = spec.position || { x: ePos.x + 250, y: ePos.y + idx * 80 };
+          const meta = findAttrMeta(attrId);
+          newNodes.push({ 
+            id: sId, 
+            type: 'specificity', 
+            position: sPos, 
+            data: { 
+              text: spec.text,
+              attributeName: meta.name,
+              color: meta.color,
+              onClick: () => {
+                setEditingSpecId(spec.id);
+                setDialogEntityId(entity.id);
+                setDialogAttributeId(attrId);
+                setDialogText(spec.text);
+                setDialogOpen(true);
+              } 
+            } 
+          });
+          newEdges.push({ id: `e-${entity.id}-${sId}`, source: entity.id, target: sId });
         }
       });
     });
@@ -255,7 +246,7 @@ export const CanvasTab = ({ entities, classes, onUpdateEntity }: CanvasTabProps)
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeDragStop={onNodeDragStop}
-          nodeTypes={nodeTypesExtended}
+          nodeTypes={nodeTypes}
           fitView
           style={{ background: '#0b1220' }}
         >
