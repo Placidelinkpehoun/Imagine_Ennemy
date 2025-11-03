@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '../../../lib/db';
 import { createGameClassSchema } from '../../../lib/validations';
+import { Prisma } from '@prisma/client';
 
 const updateSchema = createGameClassSchema.partial();
 
@@ -36,7 +37,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    await db.$transaction(async (tx) => {
+    await db.$transaction(async (tx: Prisma.TransactionClient) => {
       // Délier les enfants (éviter contrainte FK sur parentId)
       await tx.gameClass.updateMany({ where: { parentId: id }, data: { parentId: null } });
       // Supprimer les relations attributs

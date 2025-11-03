@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '../../lib/db';
 import { createGameClassSchema } from '../../lib/validations';
+import { Prisma } from '@prisma/client';
 
 export async function GET() {
   try {
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const parsed = createGameClassSchema.parse(body);
 
-    const created = await db.$transaction(async (tx) => {
+    const created = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       const gc = await tx.gameClass.create({
         data: {
           name: parsed.name,
