@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '../../../lib/db';
 import { createEntitySchema } from '../../../lib/validations';
-import { Prisma } from '@prisma/client';
 
 const updateSchema = createEntitySchema.partial();
 
@@ -12,7 +11,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const body = await request.json();
     const parsed = updateSchema.parse(body);
 
-    const updated = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const updated = await db.$transaction(async (tx) => {
       const ent = await tx.entity.update({
         where: { id },
         data: {

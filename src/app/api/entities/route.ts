@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '../../lib/db';
 import { createEntitySchema } from '../../lib/validations';
-import { Prisma } from '@prisma/client';
 
 export async function GET() {
   try {
@@ -30,7 +29,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const parsed = createEntitySchema.parse(body);
 
-    const created = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const created = await db.$transaction(async (tx) => {
       const ent = await tx.entity.create({
         data: {
           name: parsed.name,
