@@ -106,7 +106,7 @@ export const EntitiesTab = ({
         <div>
           <h2 className="text-2xl font-bold text-foreground">Entités ennemies</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Créez et gérez vos ennemis avec leurs attributs
+            Créez et gérez vos ennemis
           </p>
         </div>
         

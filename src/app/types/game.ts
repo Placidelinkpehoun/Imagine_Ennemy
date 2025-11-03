@@ -30,10 +30,16 @@ export interface Connection {
   type: 'attribute-entity';
 }
 
-export interface AttributeSpecificity {
+export interface Specificity {
   id: string;
-  entityId: string;
-  attributeId: string;
   text: string;
   position?: { x: number; y: number };
+  attributeConnections: SpecificityAttributeConnection[];
+}
+
+export interface SpecificityAttributeConnection {
+  id: string;
+  specificityId: string;
+  entityId: string;
+  attributeId: string;
 }

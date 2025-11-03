@@ -2,21 +2,32 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model AttributeSpecificity {
-  id          String   @id @default(cuid())
-  entityId    String
-  attributeId String
-  text        String
-  posX        Float?
-  posY        Float?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model Specificity {
+  id        String   @id @default(cuid())
+  text      String
+  posX      Float?
+  posY      Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  entity    Entity    @relation(fields: [entityId], references: [id], onDelete: Cascade)
-  attribute Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  attributes SpecificityAttribute[]
 
-  @@unique([entityId, attributeId])
-  @@map("attribute_specificities")
+  @@map("specificities")
+}
+
+model SpecificityAttribute {
+  id            String   @id @default(cuid())
+  specificityId String
+  entityId      String
+  attributeId   String
+  createdAt     DateTime @default(now())
+
+  specificity Specificity @relation(fields: [specificityId], references: [id], onDelete: Cascade)
+  entity      Entity      @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  attribute   Attribute   @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+
+  @@unique([specificityId, entityId, attributeId])
+  @@map("specificity_attributes")
 }
 
 datasource db {
@@ -33,7 +44,7 @@ model Attribute {
 
   gameClasses  GameClassAttribute[]
   entities     EntityAttribute[]
-  specificities AttributeSpecificity[]
+  specificities SpecificityAttribute[]
 
   @@map("attributes")
 }
@@ -66,7 +77,7 @@ model Entity {
   attributes EntityAttribute[]
   connections Connection[] @relation("EntityConnections")
   targets    Connection[] @relation("EntityTargets")
-  specifics  AttributeSpecificity[]
+  specificities SpecificityAttribute[]
 
   @@map("entities")
 }

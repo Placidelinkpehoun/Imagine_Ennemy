@@ -16,7 +16,7 @@ import {
   Position,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Entity, GameClass, AttributeSpecificity } from '../types/game';
+import { Entity, GameClass, Specificity } from '../types/game';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
@@ -119,7 +119,7 @@ const nodeTypes = {
 };
 
 export const CanvasTab = ({ entities, classes, onUpdateEntity }: CanvasTabProps) => {
-  const [specificities, setSpecificities] = useState<AttributeSpecificity[]>([]);
+  const [specificities, setSpecificities] = useState<Specificity[]>([]);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
@@ -129,6 +129,7 @@ export const CanvasTab = ({ entities, classes, onUpdateEntity }: CanvasTabProps)
   const [dialogEntityId, setDialogEntityId] = useState<string | null>(null);
   const [dialogAttributeId, setDialogAttributeId] = useState<string | null>(null);
   const [editingSpecId, setEditingSpecId] = useState<string | null>(null);
+  const [selectedSpecId, setSelectedSpecId] = useState<string | null>(null);
 
   // load all specificities
   useEffect(() => {
@@ -137,7 +138,7 @@ export const CanvasTab = ({ entities, classes, onUpdateEntity }: CanvasTabProps)
         const res = await fetch('/api/specificities', { cache: 'no-store' });
         if (res.ok) {
           const json = await res.json();
-          setSpecificities(json.data as AttributeSpecificity[]);
+          setSpecificities(json.data as Specificity[]);
         }
       } catch (e) {
         console.error(e);
@@ -155,7 +156,12 @@ export const CanvasTab = ({ entities, classes, onUpdateEntity }: CanvasTabProps)
   };
 
   const openSpecDialog = (entityId: string, attributeId: string) => {
-    const existing = specificities.find((s) => s.entityId === entityId && s.attributeId === attributeId);
+    // Chercher une spécificité existante pour cette paire entité-attribut
+    const existing = specificities.find((s) => 
+      s.attributeConnections.some(conn => 
+        conn.entityId === entityId && conn.attributeId === attributeId
+      )
+    );
     setEditingSpecId(existing?.id ?? null);
     setDialogEntityId(entityId);
     setDialogAttributeId(attributeId);
@@ -163,25 +169,47 @@ export const CanvasTab = ({ entities, classes, onUpdateEntity }: CanvasTabProps)
     setDialogOpen(true);
   };
 
+  const openSpecDialogForEdit = (specId: string) => {
+    const spec = specificities.find((s) => s.id === specId);
+    if (!spec) return;
+    setEditingSpecId(spec.id);
+    setDialogEntityId(null);
+    setDialogAttributeId(null);
+    setDialogText(spec.text);
+    setDialogOpen(true);
+  };
+
   const saveSpecificity = async () => {
-    if (!dialogEntityId || !dialogAttributeId) return;
-    const body: any = editingSpecId
-      ? { id: editingSpecId, text: dialogText }
-      : { entityId: dialogEntityId, attributeId: dialogAttributeId, text: dialogText };
-    const method = editingSpecId ? 'PATCH' : 'POST';
-    const res = await fetch('/api/specificities', {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (res.ok) {
-      const json = await res.json();
-      let next = specificities.slice();
-      const spec = json.data as AttributeSpecificity;
-      const idx = next.findIndex((s) => s.id === spec.id);
-      if (idx >= 0) next[idx] = spec; else next.push(spec);
-      setSpecificities(next);
-      setDialogOpen(false);
+    if (editingSpecId) {
+      // Mise à jour du texte uniquement
+      const res = await fetch('/api/specificities', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingSpecId, text: dialogText }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const updated = json.data as Specificity;
+        setSpecificities((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+        setDialogOpen(false);
+      }
+    } else {
+      // Création d'une nouvelle spécificité
+      if (!dialogEntityId || !dialogAttributeId) return;
+      const res = await fetch('/api/specificities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: dialogText,
+          attributeConnections: [{ entityId: dialogEntityId, attributeId: dialogAttributeId }],
+        }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const created = json.data as Specificity;
+        setSpecificities((prev) => [...prev, created]);
+        setDialogOpen(false);
+      }
     }
   };
 
@@ -189,6 +217,7 @@ export const CanvasTab = ({ entities, classes, onUpdateEntity }: CanvasTabProps)
   useEffect(() => {
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
+    const processedSpecs = new Set<string>();
 
     entities.forEach((entity, i) => {
       const ePos = entity.position || { x: 100 + i * 250, y: 100 + (i % 3) * 200 };
@@ -210,38 +239,57 @@ export const CanvasTab = ({ entities, classes, onUpdateEntity }: CanvasTabProps)
           }),
         },
       });
+    });
 
-      // Specificity nodes connected directly to entity
-      entity.attributeIds.forEach((attrId, idx) => {
-        const spec = specificities.find((s) => s.entityId === entity.id && s.attributeId === attrId);
-        if (spec) {
-          const sId = `spec-${spec.id}`;
-          const sPos = spec.position || { x: ePos.x + 250, y: ePos.y + idx * 80 };
-          const meta = findAttrMeta(attrId);
-          newNodes.push({ 
-            id: sId, 
-            type: 'specificity', 
-            position: sPos, 
-            data: { 
-              text: spec.text,
-              attributeName: meta.name,
-              color: meta.color,
-              onClick: () => {
-                setEditingSpecId(spec.id);
-                setDialogEntityId(entity.id);
-                setDialogAttributeId(attrId);
-                setDialogText(spec.text);
-                setDialogOpen(true);
-              } 
-            } 
-          });
-          newEdges.push({ 
-            id: `e-${entity.id}-${attrId}-${sId}`, 
-            source: entity.id, 
-            sourceHandle: attrId,
-            target: sId 
-          });
+    // Créer les nœuds de spécificité et les arêtes
+    specificities.forEach((spec, idx) => {
+      const sId = `spec-${spec.id}`;
+      
+      // Calculer la position par défaut
+      let defaultPos = { x: 600, y: 100 + idx * 120 };
+      if (spec.attributeConnections.length > 0) {
+        const firstConn = spec.attributeConnections[0];
+        const entity = entities.find((e) => e.id === firstConn.entityId);
+        if (entity) {
+          const ePos = entity.position || { x: 100, y: 100 };
+          defaultPos = { x: ePos.x + 350, y: ePos.y };
         }
+      }
+      
+      const sPos = spec.position || defaultPos;
+      
+      // Récupérer les noms des attributs connectés
+      const connectedAttrs = spec.attributeConnections
+        .map((conn) => findAttrMeta(conn.attributeId))
+        .filter((meta, index, self) => 
+          self.findIndex((m) => m.name === meta.name) === index
+        );
+      
+      const firstAttr = connectedAttrs[0] || { name: 'Attribut', color: '#8b5cf6' };
+      const displayName = connectedAttrs.length > 1 
+        ? `${connectedAttrs.map(a => a.name).join(', ')}`
+        : firstAttr.name;
+
+      newNodes.push({
+        id: sId,
+        type: 'specificity',
+        position: sPos,
+        data: {
+          text: spec.text,
+          attributeName: displayName,
+          color: firstAttr.color,
+          onClick: () => openSpecDialogForEdit(spec.id),
+        },
+      });
+
+      // Créer une arête pour chaque connexion
+      spec.attributeConnections.forEach((conn) => {
+        newEdges.push({
+          id: `e-${conn.id}`,
+          source: conn.entityId,
+          sourceHandle: conn.attributeId,
+          target: sId,
+        });
       });
     });
 
@@ -250,7 +298,38 @@ export const CanvasTab = ({ entities, classes, onUpdateEntity }: CanvasTabProps)
   }, [entities, classes, specificities, setNodes, setEdges]);
 
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
+    async (params: Connection) => {
+      // Connexion entre un attribut (source) et une spécificité (target)
+      if (!params.source || !params.target || !params.sourceHandle) return;
+      
+      const entityId = params.source;
+      const attributeId = params.sourceHandle;
+      const specificityId = params.target.replace('spec-', '');
+      
+      // Vérifier si c'est une spécificité
+      if (!params.target.startsWith('spec-')) return;
+      
+      // Ajouter la connexion via l'API
+      const res = await fetch('/api/specificities', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'addConnection',
+          specificityId,
+          entityId,
+          attributeId,
+        }),
+      });
+      
+      if (res.ok) {
+        // Recharger les spécificités
+        const listRes = await fetch('/api/specificities', { cache: 'no-store' });
+        if (listRes.ok) {
+          const json = await listRes.json();
+          setSpecificities(json.data as Specificity[]);
+        }
+      }
+    },
     [setEdges]
   );
 
@@ -272,7 +351,13 @@ export const CanvasTab = ({ entities, classes, onUpdateEntity }: CanvasTabProps)
           .then((r) => r.ok ? r.json() : null)
           .then((json) => {
             if (!json?.data) return;
-            setSpecificities((prev) => prev.map((s) => (s.id === json.data.id ? { ...s, position: json.data.position } : s)));
+            setSpecificities((prev) => 
+              prev.map((s) => 
+                s.id === json.data.id 
+                  ? { ...s, position: json.data.position } 
+                  : s
+              )
+            );
           })
           .catch(() => {});
       }

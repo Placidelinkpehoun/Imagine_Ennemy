@@ -71,7 +71,7 @@ export const EntityCard = ({ entity, classes, onDelete, onEdit }: EntityCardProp
           {attributes.map((attr, idx) => (
             <Badge
               key={idx}
-              className="text-xs"
+              className="text-xs w-fit"
               style={{
                 backgroundColor: `${attr.color}20`,
                 color: attr.color,
