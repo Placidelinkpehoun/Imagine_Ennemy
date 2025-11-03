@@ -43,7 +43,6 @@ export async function POST(request: NextRequest) {
       if (parsed.attributeIds && parsed.attributeIds.length > 0) {
         await tx.gameClassAttribute.createMany({
           data: parsed.attributeIds.map((attributeId) => ({ gameClassId: gc.id, attributeId })),
-          skipDuplicates: true,
         });
       }
 
