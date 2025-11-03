@@ -12,6 +12,8 @@ import {
   useEdgesState,
   addEdge,
   Connection,
+  Handle,
+  Position,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Entity, GameClass, AttributeSpecificity } from '../types/game';
@@ -29,8 +31,7 @@ const EntityNode = ({ data }: { data: any }) => {
   const { entity, attributes } = data;
   
   return (
-    <>
-    <div className="bg-card border-2 border-entityCard/30 rounded-sm p-4 min-w-[200px] shadow-card">
+    <div className="relative bg-card border-2 border-entityCard/30 rounded-sm p-4 min-w-[200px] shadow-card">
       <div className="font-bold text-entityCard mb-2">{entity.name}</div>
       {entity.description && (
         <div className="text-xs max-w-80 text-muted-foreground mb-2">{entity.description}</div>
@@ -42,23 +43,61 @@ const EntityNode = ({ data }: { data: any }) => {
             onClick={attr.onClick}
             className="bg-card border rounded-sm px-3 py-2 text-xs shadow-sm cursor-pointer w-fit"
             style={{ borderColor: attr.color, color: attr.color }}
+            id={`attr-${attr.attrId}`}
           >
             {attr.name}
           </div>
         ))}
       </div>
+      {/* Handles positionnés de manière absolue par rapport au nœud */}
+      {attributes.map((attr: any, idx: number) => {
+        // Calculer la position Y en fonction de l'index
+        // Offset pour le titre + description + début des attributs
+        const headerHeight = entity.description ? 70 : 50;
+        const attrHeight = 42; // hauteur approximative de chaque attribut
+        const yPos = headerHeight + (idx * attrHeight) + (attrHeight / 2);
+        
+        return (
+          <Handle
+            key={attr.attrId}
+            type="source"
+            position={Position.Right}
+            id={attr.attrId}
+            style={{ 
+              position: 'absolute',
+              right: -6,
+              top: `${yPos}px`,
+              background: attr.color,
+              width: '12px',
+              height: '12px',
+              border: '2px solid #0b1220',
+              transform: 'translateY(-50%)'
+            }}
+          />
+        );
+      })}
     </div>
-    </>
   );
 };
 
 const SpecificityNode = ({ data }: { data: any }) => {
   const { text, onClick, attributeName, color } = data;
   return (
-    <div
-      onClick={onClick}
-      className="bg-card border rounded-sm shadow-sm cursor-pointer max-w-64"
-    >
+    <div className="relative bg-card border rounded-sm shadow-sm cursor-pointer max-w-64" onClick={onClick}>
+      <Handle
+        type="target"
+        position={Position.Left}
+        style={{ 
+          position: 'absolute',
+          left: -6,
+          top: '50%',
+          background: color || '#8b5cf6',
+          width: '12px',
+          height: '12px',
+          border: '2px solid #0b1220',
+          transform: 'translateY(-50%)'
+        }}
+      />
       {attributeName && (
         <div 
           className="px-3 py-1 text-xs font-medium border-b"
@@ -196,7 +235,12 @@ export const CanvasTab = ({ entities, classes, onUpdateEntity }: CanvasTabProps)
               } 
             } 
           });
-          newEdges.push({ id: `e-${entity.id}-${sId}`, source: entity.id, target: sId });
+          newEdges.push({ 
+            id: `e-${entity.id}-${attrId}-${sId}`, 
+            source: entity.id, 
+            sourceHandle: attrId,
+            target: sId 
+          });
         }
       });
     });
@@ -251,7 +295,7 @@ export const CanvasTab = ({ entities, classes, onUpdateEntity }: CanvasTabProps)
           style={{ background: '#0b1220' }}
         >
           <Background color="#475569" size={1} gap={18} />
-          <Controls/>
+          <Controls style={{ color: '#0b1220' }}/>
           <MiniMap
             style={{ backgroundColor: '#0b1220' }}
             nodeColor={(node) => {
