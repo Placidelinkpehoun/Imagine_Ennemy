@@ -1,8 +1,5 @@
 {
-  "buildCommand": "prisma generate && pnpm run build",
+  "buildCommand": "prisma generate ; pnpm run build",
   "installCommand": "pnpm install",
-  "framework": "nextjs",
-  "env": {
-    "DATABASE_URL": "@database_url"
-  }
+  "framework": "nextjs"
 }
